@@ -1,3 +1,4 @@
+// sky-pubsub/pkg/clientlib/pubsubclient/client.go
 package pubsubclient
 
 import (
@@ -13,7 +14,7 @@ import (
 
 type Client struct {
 	BaseURL    string
-	httpClient *http.Client
+	HttpClient *http.Client
 }
 
 type PullResponse struct {
@@ -42,14 +43,19 @@ type Message struct {
 	Data string `json:"data"`
 }
 
-func New(baseURL string) *Client {
-	httpClient := &http.Client{
-		Timeout: time.Second * 10, // set a timeout, here it's 10 seconds
+func NewClient(baseURL string, httpClient ...*http.Client) *Client {
+	var client *http.Client
+	if len(httpClient) > 0 {
+		client = httpClient[0]
+	} else {
+		client = &http.Client{
+			Timeout: time.Second * 10,
+		}
 	}
 
 	return &Client{
 		BaseURL:    baseURL,
-		httpClient: httpClient,
+		HttpClient: client,
 	}
 }
 
@@ -59,7 +65,7 @@ func (cli *Client) CreateTopic(topic Topic) error {
 		return err
 	}
 
-	resp, err := cli.httpClient.Post(cli.BaseURL+"/topics", "application/json", bytes.NewBuffer(topicJson))
+	resp, err := cli.HttpClient.Post(cli.BaseURL+"/topics", "application/json", bytes.NewBuffer(topicJson))
 	if err != nil {
 		return err
 	}
@@ -77,7 +83,7 @@ func (cli *Client) CreateSubscription(topicName string, subscription Subscriptio
 		return err
 	}
 
-	resp, err := cli.httpClient.Post(cli.BaseURL+"/topics/"+topicName+"/subscriptions", "application/json", bytes.NewBuffer(subscriptionJson))
+	resp, err := cli.HttpClient.Post(cli.BaseURL+"/topics/"+topicName+"/subscriptions", "application/json", bytes.NewBuffer(subscriptionJson))
 	if err != nil {
 		return err
 	}
@@ -95,7 +101,7 @@ func (cli *Client) PublishMessage(topicName string, message Message) error {
 		return err
 	}
 
-	resp, err := cli.httpClient.Post(cli.BaseURL+"/topics/"+topicName+"/publish", "application/json", bytes.NewBuffer(messageJson))
+	resp, err := cli.HttpClient.Post(cli.BaseURL+"/topics/"+topicName+"/publish", "application/json", bytes.NewBuffer(messageJson))
 	if err != nil {
 		return err
 	}
@@ -108,7 +114,7 @@ func (cli *Client) PublishMessage(topicName string, message Message) error {
 }
 
 func (cli *Client) PullMessage(subscriptionName string) (*Message, error) {
-	resp, err := cli.httpClient.Get(cli.BaseURL + "/subscriptions/" + subscriptionName + "/pull")
+	resp, err := cli.HttpClient.Get(cli.BaseURL + "/subscriptions/" + subscriptionName + "/pull")
 	if err != nil {
 		return nil, err
 	}
@@ -129,7 +135,7 @@ func (cli *Client) PullMessage(subscriptionName string) (*Message, error) {
 }
 
 func (cli *Client) ListTopics() ([]string, error) {
-	resp, err := cli.httpClient.Get(cli.BaseURL + "/topics")
+	resp, err := cli.HttpClient.Get(cli.BaseURL + "/topics")
 	if err != nil {
 		return nil, err
 	}
@@ -209,7 +215,7 @@ func (cli *Client) GetMessages(topic string) ([]Message, error) {
 	req.Header.Set("Content-Type", "application/json")
 
 	// Send the request and handle the response
-	resp, err := cli.httpClient.Do(req)
+	resp, err := cli.HttpClient.Do(req)
 	if err != nil {
 		return nil, fmt.Errorf("failed to send request: %v", err)
 	}
