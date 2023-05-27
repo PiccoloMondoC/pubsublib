@@ -164,8 +164,18 @@ func (cli *Client) PullMessage(subscriptionName string, headers map[string]strin
 	return &pullResponse.Message, nil
 }
 
-func (cli *Client) ListTopics() ([]string, error) {
-	resp, err := cli.HttpClient.Get(cli.BaseURL + "/topics")
+func (cli *Client) ListTopics(headers map[string]string) ([]string, error) {
+	req, err := http.NewRequest("GET", cli.BaseURL+"/topics", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set headers
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	resp, err := cli.HttpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
