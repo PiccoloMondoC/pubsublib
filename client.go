@@ -94,13 +94,24 @@ func (cli *Client) CreateSubscription(topicName string, subscription Subscriptio
 	return nil
 }
 
-func (cli *Client) PublishMessage(topicName string, message Message) error {
+func (cli *Client) PublishMessage(topicName string, message Message, headers map[string]string) error {
 	messageJson, err := json.Marshal(message)
 	if err != nil {
 		return err
 	}
 
-	resp, err := cli.HttpClient.Post(cli.BaseURL+"/topics/"+topicName+"/publish", "application/json", bytes.NewBuffer(messageJson))
+	// Create a new request
+	req, err := http.NewRequest("POST", cli.BaseURL+"/topics/"+topicName+"/publish", bytes.NewBuffer(messageJson))
+	if err != nil {
+		return err
+	}
+
+	// Set headers
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	resp, err := cli.HttpClient.Do(req) // execute the request
 	if err != nil {
 		return err
 	}
