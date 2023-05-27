@@ -105,7 +105,7 @@ func (cli *Client) PublishMessage(topicName string, message Message, headers map
 	if err != nil {
 		return err
 	}
-
+	
 	// Set headers
 	for key, value := range headers {
 		req.Header.Set(key, value)
