@@ -58,13 +58,23 @@ func NewClient(baseURL string, httpClient ...*http.Client) *Client {
 	}
 }
 
-func (cli *Client) CreateTopic(topic Topic) error {
+func (cli *Client) CreateTopic(topic Topic, headers map[string]string) error {
 	topicJson, err := json.Marshal(topic)
 	if err != nil {
 		return err
 	}
 
-	resp, err := cli.HttpClient.Post(cli.BaseURL+"/topics", "application/json", bytes.NewBuffer(topicJson))
+	req, err := http.NewRequest(http.MethodPost, cli.BaseURL+"/topics", bytes.NewBuffer(topicJson))
+	if err != nil {
+		return err
+	}
+
+	req.Header.Set("Content-Type", "application/json")
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	resp, err := cli.HttpClient.Do(req)
 	if err != nil {
 		return err
 	}
