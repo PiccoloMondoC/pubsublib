@@ -133,8 +133,18 @@ func (cli *Client) PublishMessage(topicName string, message Message, headers map
 	return nil
 }
 
-func (cli *Client) PullMessage(subscriptionName string) (*Message, error) {
-	resp, err := cli.HttpClient.Get(cli.BaseURL + "/subscriptions/" + subscriptionName + "/pull")
+func (cli *Client) PullMessage(subscriptionName string, headers map[string]string) (*Message, error) {
+	req, err := http.NewRequest("GET", cli.BaseURL+"/subscriptions/"+subscriptionName+"/pull", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	// Set headers
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	resp, err := cli.HttpClient.Do(req)
 	if err != nil {
 		return nil, err
 	}
