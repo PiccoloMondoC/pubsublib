@@ -240,7 +240,7 @@ func (cli *Client) EnsureTopicExists(topic string) error {
 	return nil
 }
 
-func (cli *Client) GetMessages(topic string) ([]Message, error) {
+func (cli *Client) GetMessages(topic string, headers map[string]string) ([]Message, error) {
 	// Validate the topic
 	err := validation.Validate(topic, validation.Required, validation.Length(1, 255))
 	if err != nil {
@@ -251,6 +251,11 @@ func (cli *Client) GetMessages(topic string) ([]Message, error) {
 	req, err := http.NewRequest(http.MethodGet, fmt.Sprintf("%s/topics/%s/messages", cli.BaseURL, topic), nil)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create request: %v", err)
+	}
+
+	// Set headers
+	for key, value := range headers {
+		req.Header.Set(key, value)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
