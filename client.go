@@ -66,17 +66,19 @@ func (cli *Client) CreateTopic(topic Topic, headers map[string]string) error {
 		return err
 	}
 
-	req, err := http.NewRequest(http.MethodPost, cli.BaseURL+"/topics", bytes.NewBuffer(topicJson))
+	// Create a new request
+	req, err := http.NewRequest("POST", cli.BaseURL+"/topics", bytes.NewBuffer(topicJson))
 	if err != nil {
 		return err
 	}
 
 	req.Header.Set("Content-Type", "application/json")
+	// Set headers
 	for key, value := range headers {
 		req.Header.Set(key, value)
 	}
 
-	resp, err := cli.HttpClient.Do(req)
+	resp, err := cli.HttpClient.Do(req) // execute the request
 	if err != nil {
 		return err
 	}
