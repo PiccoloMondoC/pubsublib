@@ -39,7 +39,9 @@ type Subscription struct {
 }
 
 type Message struct {
-	Data string `json:"data"`
+	ID        string `json:"id"`
+	Data      string `json:"data"`
+	Timestamp string `json:"timestamp"`
 }
 
 func NewClient(baseURL string, httpClient ...*http.Client) *Client {
