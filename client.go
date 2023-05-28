@@ -1,4 +1,3 @@
-// sky-pubsub/pkg/clientlib/pubsubclient/client.go
 package pubsubclient
 
 import (
