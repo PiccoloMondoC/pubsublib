@@ -223,7 +223,7 @@ func (cli *Client) TopicExists(topic string) (bool, error) {
 	return false, nil
 }
 
-func (cli *Client) EnsureTopicExists(topic string) error {
+func (cli *Client) EnsureTopicExists(topic string, headers map[string]string) error {
 	err := validation.Validate(topic, validation.Required, validation.Length(1, 255))
 	if err != nil {
 		return fmt.Errorf("invalid topic: %v", err)
@@ -235,7 +235,7 @@ func (cli *Client) EnsureTopicExists(topic string) error {
 	}
 
 	if !exists {
-		err = cli.CreateTopic(Topic{Name: topic})
+		err = cli.CreateTopic(Topic{Name: topic}, headers)
 		if err != nil {
 			return fmt.Errorf("failed to create topic: %v", err)
 		}
