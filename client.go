@@ -1,3 +1,4 @@
+// sky-pubsub/pkg/clientlib/pubsubclient/client.go
 package pubsubclient
 
 import (
@@ -90,18 +91,30 @@ func (cli *Client) CreateTopic(topic Topic, headers map[string]string) error {
 	return nil
 }
 
-func (cli *Client) CreateSubscription(topicName string, subscription Subscription) error {
+func (cli *Client) CreateSubscription(topicName string, subscription Subscription, headers map[string]string) error {
 	subscriptionJson, err := json.Marshal(subscription)
 	if err != nil {
 		return err
 	}
 
-	resp, err := cli.HttpClient.Post(cli.BaseURL+"/topics/"+topicName+"/subscriptions", "application/json", bytes.NewBuffer(subscriptionJson))
+	// Create the request
+	req, err := http.NewRequest(http.MethodPost, cli.BaseURL+"/topics/"+topicName+"/subscriptions", bytes.NewBuffer(subscriptionJson))
 	if err != nil {
 		return err
 	}
 
+	// Set headers
+	for key, value := range headers {
+		req.Header.Set(key, value)
+	}
+
+	// Execute the request
+	resp, err := cli.HttpClient.Do(req)
+	if err != nil {
+		return err
+	}
 	defer resp.Body.Close()
+
 	if resp.StatusCode != http.StatusCreated {
 		return fmt.Errorf("error creating subscription: expected status code 201, got %d", resp.StatusCode)
 	}
@@ -119,7 +132,7 @@ func (cli *Client) PublishMessage(topicName string, message Message, headers map
 	if err != nil {
 		return err
 	}
-	
+
 	// Set headers
 	for key, value := range headers {
 		req.Header.Set(key, value)
@@ -203,13 +216,13 @@ func (cli *Client) ListTopics(headers map[string]string) ([]string, error) {
 	return listTopicsResponse.Topics, nil
 }
 
-func (cli *Client) TopicExists(topic string) (bool, error) {
+func (cli *Client) TopicExists(topic string, headers map[string]string) (bool, error) {
 	err := validation.Validate(topic, validation.Required, validation.Length(1, 255))
 	if err != nil {
 		return false, fmt.Errorf("invalid topic: %v", err)
 	}
 
-	topics, err := cli.ListTopics()
+	topics, err := cli.ListTopics(headers)
 	if err != nil {
 		return false, fmt.Errorf("failed to list topics: %v", err)
 	}
@@ -229,7 +242,7 @@ func (cli *Client) EnsureTopicExists(topic string, headers map[string]string) er
 		return fmt.Errorf("invalid topic: %v", err)
 	}
 
-	exists, err := cli.TopicExists(topic)
+	exists, err := cli.TopicExists(topic, headers)
 	if err != nil {
 		return err
 	}
