@@ -1,3 +1,4 @@
+// sky-pubsub/pkg/clientlib/pubsubclient/client.go
 package pubsubclient
 
 import (
@@ -14,6 +15,8 @@ import (
 type Client struct {
 	BaseURL    string
 	HttpClient *http.Client
+	Token      string
+	ApiKey     string
 }
 
 type PullResponse struct {
@@ -44,7 +47,7 @@ type Message struct {
 	Timestamp string `json:"timestamp"`
 }
 
-func NewClient(baseURL string, httpClient ...*http.Client) *Client {
+func NewClient(baseURL string, token string, apiKey string, httpClient ...*http.Client) *Client {
 	var client *http.Client
 	if len(httpClient) > 0 {
 		client = httpClient[0]
@@ -57,10 +60,12 @@ func NewClient(baseURL string, httpClient ...*http.Client) *Client {
 	return &Client{
 		BaseURL:    baseURL,
 		HttpClient: client,
+		Token:      token,
+		ApiKey:     apiKey,
 	}
 }
 
-func (cli *Client) CreateTopic(topic Topic, headers map[string]string) error {
+func (cli *Client) CreateTopic(topic Topic) error {
 	topicJson, err := json.Marshal(topic)
 	if err != nil {
 		return err
@@ -73,10 +78,8 @@ func (cli *Client) CreateTopic(topic Topic, headers map[string]string) error {
 	}
 
 	req.Header.Set("Content-Type", "application/json")
-	// Set headers
-	for key, value := range headers {
-		req.Header.Set(key, value)
-	}
+	req.Header.Set("Authorization", "Bearer "+cli.Token)
+	req.Header.Set("X-API-Key", cli.ApiKey)
 
 	resp, err := cli.HttpClient.Do(req) // execute the request
 	if err != nil {
@@ -90,7 +93,7 @@ func (cli *Client) CreateTopic(topic Topic, headers map[string]string) error {
 	return nil
 }
 
-func (cli *Client) CreateSubscription(topicName string, subscription Subscription, headers map[string]string) error {
+func (cli *Client) CreateSubscription(topicName string, subscription Subscription) error {
 	subscriptionJson, err := json.Marshal(subscription)
 	if err != nil {
 		return err
@@ -103,9 +106,9 @@ func (cli *Client) CreateSubscription(topicName string, subscription Subscriptio
 	}
 
 	// Set headers
-	for key, value := range headers {
-		req.Header.Set(key, value)
-	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+cli.Token)
+	req.Header.Set("X-API-Key", cli.ApiKey)
 
 	// Execute the request
 	resp, err := cli.HttpClient.Do(req)
@@ -120,7 +123,7 @@ func (cli *Client) CreateSubscription(topicName string, subscription Subscriptio
 	return nil
 }
 
-func (cli *Client) PublishMessage(topicName string, message Message, headers map[string]string) error {
+func (cli *Client) PublishMessage(topicName string, message Message) error {
 	messageJson, err := json.Marshal(message)
 	if err != nil {
 		return err
@@ -133,9 +136,9 @@ func (cli *Client) PublishMessage(topicName string, message Message, headers map
 	}
 
 	// Set headers
-	for key, value := range headers {
-		req.Header.Set(key, value)
-	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+cli.Token)
+	req.Header.Set("X-API-Key", cli.ApiKey)
 
 	resp, err := cli.HttpClient.Do(req) // execute the request
 	if err != nil {
@@ -149,16 +152,15 @@ func (cli *Client) PublishMessage(topicName string, message Message, headers map
 	return nil
 }
 
-func (cli *Client) PullMessage(subscriptionName string, headers map[string]string) (*Message, error) {
+func (cli *Client) PullMessage(subscriptionName string) (*Message, error) {
 	req, err := http.NewRequest("GET", cli.BaseURL+"/subscriptions/"+subscriptionName+"/pull", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Set headers
-	for key, value := range headers {
-		req.Header.Set(key, value)
-	}
+	req.Header.Set("Authorization", "Bearer "+cli.Token)
+	req.Header.Set("X-API-Key", cli.ApiKey)
 
 	resp, err := cli.HttpClient.Do(req)
 	if err != nil {
@@ -180,16 +182,15 @@ func (cli *Client) PullMessage(subscriptionName string, headers map[string]strin
 	return &pullResponse.Message, nil
 }
 
-func (cli *Client) ListTopics(headers map[string]string) ([]string, error) {
+func (cli *Client) ListTopics() ([]string, error) {
 	req, err := http.NewRequest("GET", cli.BaseURL+"/topics", nil)
 	if err != nil {
 		return nil, err
 	}
 
 	// Set headers
-	for key, value := range headers {
-		req.Header.Set(key, value)
-	}
+	req.Header.Set("Authorization", "Bearer "+cli.Token)
+	req.Header.Set("X-API-Key", cli.ApiKey)
 
 	resp, err := cli.HttpClient.Do(req)
 	if err != nil {
@@ -215,13 +216,13 @@ func (cli *Client) ListTopics(headers map[string]string) ([]string, error) {
 	return listTopicsResponse.Topics, nil
 }
 
-func (cli *Client) TopicExists(topic string, headers map[string]string) (bool, error) {
+func (cli *Client) TopicExists(topic string) (bool, error) {
 	err := validation.Validate(topic, validation.Required, validation.Length(1, 255))
 	if err != nil {
 		return false, fmt.Errorf("invalid topic: %v", err)
 	}
 
-	topics, err := cli.ListTopics(headers)
+	topics, err := cli.ListTopics()
 	if err != nil {
 		return false, fmt.Errorf("failed to list topics: %v", err)
 	}
@@ -235,19 +236,19 @@ func (cli *Client) TopicExists(topic string, headers map[string]string) (bool, e
 	return false, nil
 }
 
-func (cli *Client) EnsureTopicExists(topic string, headers map[string]string) error {
+func (cli *Client) EnsureTopicExists(topic string) error {
 	err := validation.Validate(topic, validation.Required, validation.Length(1, 255))
 	if err != nil {
 		return fmt.Errorf("invalid topic: %v", err)
 	}
 
-	exists, err := cli.TopicExists(topic, headers)
+	exists, err := cli.TopicExists(topic)
 	if err != nil {
 		return err
 	}
 
 	if !exists {
-		err = cli.CreateTopic(Topic{Name: topic}, headers)
+		err = cli.CreateTopic(Topic{Name: topic})
 		if err != nil {
 			return fmt.Errorf("failed to create topic: %v", err)
 		}
@@ -256,7 +257,7 @@ func (cli *Client) EnsureTopicExists(topic string, headers map[string]string) er
 	return nil
 }
 
-func (cli *Client) GetMessages(topic string, headers map[string]string) ([]Message, error) {
+func (cli *Client) GetMessages(topic string) ([]Message, error) {
 	// Validate the topic
 	err := validation.Validate(topic, validation.Required, validation.Length(1, 255))
 	if err != nil {
@@ -270,10 +271,8 @@ func (cli *Client) GetMessages(topic string, headers map[string]string) ([]Messa
 	}
 
 	// Set headers
-	for key, value := range headers {
-		req.Header.Set(key, value)
-	}
-	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Authorization", "Bearer "+cli.Token)
+	req.Header.Set("X-API-Key", cli.ApiKey)
 
 	// Send the request and handle the response
 	resp, err := cli.HttpClient.Do(req)
