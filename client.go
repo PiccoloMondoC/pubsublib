@@ -1,4 +1,4 @@
-package pubsubclient
+package pubsublib
 
 import (
 	"bytes"
